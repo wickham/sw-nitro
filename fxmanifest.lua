@@ -6,12 +6,7 @@ description 'The most advanced nitro system for FiveM'
 author 'Deltanic - https://github.com/Deltanic/'
 url 'https://github.com/swcfx/sw-nitro'
 
-client_script 'client/utils.lua'
-client_script 'client/fuel.lua'
-client_script 'client/ptfx.lua'
-client_script 'client/boost.lua'
-client_script 'client/purge.lua'
-client_script 'client/trails.lua'
-client_script 'client/main.lua'
+client_scripts {'config/config.lua', 'client/utils.lua', 'client/fuel.lua', 'client/ptfx.lua', 'client/boost.lua',
+                'client/purge.lua', 'client/trails.lua', 'client/main.lua'}
+server_scripts {'server/main.lua', 'server/commands.lua'}
 
-server_script 'server/main.lua'

@@ -1,17 +1,5 @@
--- local DEFAULT_PURGE_CONFIG = {
---   infernus = {
---     [1] = {
---       scale: 0.5,
---       density: 3,
---       color: { 255, 255, 255 },
---       position: { 0.0, 0.0, 0.0 },
---       rotation: { 0.0, 0.0, 0.0 }
---     }
---   }
--- }
-
+local CUSTOM_PRESETS = Config.PurgeSettings
 --------------------------------------------------------------------------------
-
 -- local modelConfig = {}
 -- local entityConfig = {}
 --
@@ -30,45 +18,92 @@
 -- local function SetVehicleNitroPurgeNozzleColor() end
 -- local function SetVehicleNitroPurgeNozzlePosition() end
 -- local function SetVehicleNitroPurgeNozzleRotation() end
-
 --------------------------------------------------------------------------------
-
 local vehicles = {}
 local particles = {}
 
 function IsVehicleNitroPurgeEnabled(vehicle)
-  return vehicles[vehicle] == true
+    return vehicles[vehicle] == true
 end
 
 function SetVehicleNitroPurgeEnabled(vehicle, enabled)
-  if IsVehicleNitroPurgeEnabled(vehicle) == enabled then
-    return
-  end
-
-  if enabled then
-    local bone = GetEntityBoneIndexByName(vehicle, 'bonnet')
-    local pos = GetWorldPositionOfEntityBone(vehicle, bone)
-    local off = GetOffsetFromEntityGivenWorldCoords(vehicle, pos.x, pos.y, pos.z)
-    local ptfxs = {}
-
-    for i=0,3 do
-      local leftPurge = CreateVehiclePurgeSpray(vehicle, off.x - 0.5, off.y + 0.05, off.z, 40.0, -20.0, 0.0, 0.5)
-      local rightPurge = CreateVehiclePurgeSpray(vehicle, off.x + 0.5, off.y + 0.05, off.z, 40.0, 20.0, 0.0, 0.5)
-
-      table.insert(ptfxs, leftPurge)
-      table.insert(ptfxs, rightPurge)
+    if IsVehicleNitroPurgeEnabled(vehicle) == enabled then
+        return
     end
-
-    vehicles[vehicle] = true
-    particles[vehicle] = ptfxs
-  else
-    if particles[vehicle] and #particles[vehicle] > 0 then
-      for _, particleId in ipairs(particles[vehicle]) do
-        StopParticleFxLooped(particleId)
-      end
+    local custom_settings = nil
+    for key, _ in pairs(CUSTOM_PRESETS) do
+        if GetHashKey(key) == GetEntityModel(vehicle) then
+            custom_settings = key
+            break
+        end
     end
+    if custom_settings == nil then
+        custom_settings = "default"
+    end
+    if enabled then
+        local bone = GetEntityBoneIndexByName(vehicle, 'bonnet')
+        local pos = GetWorldPositionOfEntityBone(vehicle, bone)
+        local off = GetOffsetFromEntityGivenWorldCoords(vehicle, pos.x, pos.y, pos.z)
+        local ptfxs = {}
+        local mod = GetVehicleMod(vehicle, 7)
+        local aerial = GetVehicleMod(vehicle, 43)
+        local colorRGB = {
+        }
+        
+        if CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)] ~= nil then
+            for i = 1, #CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)] do
+                if CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].color == "aerials" then
+                    if Config.PurgeColors[custom_settings][("aerials_%s"):format(aerial)] ~= nil then
+                        colorRGB = Config.PurgeColors[custom_settings][("aerials_%s"):format(aerial)]
+                    end
+                else
+                    colorRGB = {
+                        CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].color[1],
+                        CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].color[2],
+                        CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].color[3]
+                    }
+                end
+                -- (vehicle, xOffset, yOffset, zOffset, xRot, yRot, zRot, scale, density, r, g, b)
+                table.insert(ptfxs, CreateVehiclePurgeSprayColored(vehicle, off.x +
+                    CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].position[1], off.y +
+                    CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].position[2], off.z +
+                    CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].position[3],
+                    CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].rotation[1],
+                    CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].rotation[2],
+                    CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].rotation[3],
+                    CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].scale,
+                    CUSTOM_PRESETS[custom_settings][("hood_%s"):format(mod)][i].density,
+                    colorRGB[1],
+                    colorRGB[2],
+                    colorRGB[3]))
+            end
 
-    vehicles[vehicle] = nil
-    particles[vehicle] = nil
-  end
+        else
+            for i = 1, #CUSTOM_PRESETS[custom_settings] do
+                            colorRGB={CUSTOM_PRESETS[custom_settings][i].color[1],
+                            CUSTOM_PRESETS[custom_settings][i].color[2],
+                            CUSTOM_PRESETS[custom_settings][i].color[3]}
+                -- (vehicle, xOffset, yOffset, zOffset, xRot, yRot, zRot, scale, density, r, g, b)
+                table.insert(ptfxs,
+                    CreateVehiclePurgeSprayColored(vehicle, off.x + CUSTOM_PRESETS[custom_settings][i].position[1],
+                        off.y + CUSTOM_PRESETS[custom_settings][i].position[2],
+                        off.z + CUSTOM_PRESETS[custom_settings][i].position[3],
+                        CUSTOM_PRESETS[custom_settings][i].rotation[1], CUSTOM_PRESETS[custom_settings][i].rotation[2],
+                        CUSTOM_PRESETS[custom_settings][i].rotation[3], CUSTOM_PRESETS[custom_settings][i].scale,
+                        CUSTOM_PRESETS[custom_settings][i].density, colorRGB[1],
+                        colorRGB[2],colorRGB[3]))
+            end
+        end
+        vehicles[vehicle] = true
+        particles[vehicle] = ptfxs
+    else
+        if particles[vehicle] and #particles[vehicle] > 0 then
+            for _, particleId in ipairs(particles[vehicle]) do
+                StopParticleFxLooped(particleId)
+            end
+        end
+
+        vehicles[vehicle] = nil
+        particles[vehicle] = nil
+    end
 end
